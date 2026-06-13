@@ -1,0 +1,6 @@
+.env
+tests/
+__pycache__
+alertes_log.csv
+test.py
+tests.py
