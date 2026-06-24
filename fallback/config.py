@@ -4,7 +4,7 @@
 #  Seuils de détection 
 EAR_SEUIL = 0.25   # En dessous → œil considéré fermé
 MAR_SEUIL = 0.90  # Au dessus  → bâillement détecté
-FRAMES_CONSEC = 30     # Frames consécutives → somnolence (~2s à 15fps)
+FRAMES_CONSEC = 5     # Frames consécutives → somnolence (~2s à 15fps)
 
 #  Seuils pose céphalique (degrés) 
 POSE_SEUIL_YAW   = 20    # Rotation gauche/droite
@@ -26,3 +26,24 @@ POINTS_POSE = [1, 152, 33, 263, 61, 291]
 
 #  Fichier de log 
 LOG_FICHIER = "alertes_log.csv"
+
+# ── Fichier de log ───────────────────────────────────
+LOG_FICHIER = "alertes_log.csv"
+
+# ── Reconnaissance faciale — MobileFaceNet (TFLite) ──
+# Même modèle que l'app mobile (parité obligatoire des embeddings)
+FACE_EMBED_MODEL_PATH = "mobilefacenet.tflite"
+FACE_EMBED_INPUT_SIZE = 112    # entrée 112x112x3
+EMBEDDING_DIM         = 192    # taille du vecteur de sortie
+DB_PATH               = "drivers.db"
+SEUIL_RECONNAISSANCE  = 0.35   # ⚠️ valeur de départ — À CALIBRER empiriquement
+TIMEOUT_AUTH           = 30     # secondes avant échec
+LED_PIN                = 18     # GPIO physique (numérotation BCM)
+
+# ── Buzzer (alerte sonore EF5) ───────────────────────
+BUZZER_PIN = 23   # GPIO physique (numérotation BCM)
+
+# ── Modèle YOLO (pipeline principal) ─────────────────
+YOLO_MODEL_PATH = "best_int8.tflite"
+YOLO_CONF_SEUIL = 0.5
+YOLO_IMGZ = 352
