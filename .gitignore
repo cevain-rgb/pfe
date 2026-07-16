@@ -4,3 +4,9 @@ __pycache__
 alertes_log.csv
 test.py
 tests.py
+*.example.py
+migrations/
+instance/
+.vscode/
+current_status.json
+pending_sync.json
