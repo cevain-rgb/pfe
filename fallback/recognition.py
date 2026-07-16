@@ -148,7 +148,7 @@ def identifier_conducteur(frame):
         embedding_ref = json.loads(driver.embedding)
         d = distance_cosinus(embedding_live, embedding_ref)
         if d < meilleure_distance:
-            meilleure_distance, meilleur_nom = d, driver.name
+            meilleure_distance, meilleur_nom = d, driver.nom_complet
 
     if meilleure_distance < SEUIL_RECONNAISSANCE:
         return meilleur_nom, round(meilleure_distance, 4)
@@ -167,7 +167,7 @@ def enregistrer_nouveau_conducteur(nom, frame):
         print("[ERREUR] Aucun visage détecté pour l'inscription.")
         return False
 
-    driver = Driver(name=nom, embedding=json.dumps(embedding), source="local")
+    driver = Driver(nom=nom, embedding=json.dumps(embedding), source="local")
     db.session.add(driver)
     db.session.commit()
     print(f"[DB] Conducteur '{nom}' enregistré.")

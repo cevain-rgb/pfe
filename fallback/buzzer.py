@@ -21,8 +21,8 @@ _thread_buzzer = None
 
 # (durée_on, durée_off) en secondes, répété en séquence
 PATTERNS = {
-    "SOMNOLENCE":  [(0.15, 0.10)] * 6,   # rapide et répété — urgent
-    "FATIGUE":     [(0.30, 0.30)] * 3,   # modéré
+    "SOMNOLENCE":  [(0.15, 0.10)] * 20,   # rapide et répété — urgent
+    "FATIGUE":     [(0.30, 0.30)] * 10,   # modéré
     "DISTRACTION": [(0.50, 0.00)],       # un seul bip court
 }
 

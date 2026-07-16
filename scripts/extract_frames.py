@@ -1,6 +1,8 @@
-import cv2
-import os
 import argparse
+import os
+
+import cv2
+
 
 def extract_frames(video_path, output_dir, interval_sec=1.0, max_frames=None):
     """

@@ -1,32 +1,27 @@
-# detection.py
-# Pipeline FALLBACK — Surveillance somnolence/fatigue/distraction
-# via MediaPipe (EAR/MAR/Pose)
-# Le conducteur est déjà authentifié par auth.py avant l'appel.
+# detection.py — Pipeline FALLBACK MediaPipe
+# Écriture alerte uniquement à la TRANSITION vers un nouvel état d'alerte
 
 import cv2
 import time
-import os
-import urllib.request
 import mediapipe as mp
 from mediapipe.tasks.python.vision.face_landmarker import FaceLandmarker, FaceLandmarkerOptions
 from mediapipe.tasks.python.vision.core.vision_task_running_mode import VisionTaskRunningMode
 from mediapipe.tasks.python.core.base_options import BaseOptions
 
 from config import (
-    EAR_SEUIL, MAR_SEUIL, FRAMES_CONSEC,
+    EAR_SEUIL, MAR_SEUIL, FRAMES_CONSEC, FRAMES_CONSEC_POSE,
     POSE_SEUIL_YAW, POSE_SEUIL_PITCH, POSE_SEUIL_ROLL,
     OEIL_GAUCHE, OEIL_DROIT, BOUCHE,
     CAM_INDEX, CAM_WIDTH, CAM_HEIGHT, CAM_FPS
 )
-from utils  import calculer_EAR, calculer_MAR, estimer_pose, pretraiter_frame
-from logger import init_log, ecrire_log, rapport_final
+from utils         import calculer_EAR, calculer_MAR, estimer_pose, pretraiter_frame
+from logger        import init_log, ecrire_log, rapport_final
 import buzzer
+import led
+import state
+import session_manager
 
 MODEL_PATH = "face_landmarker.task"
-MODEL_URL  = (
-    "https://storage.googleapis.com/mediapipe-models/"
-    "face_landmarker/face_landmarker/float16/1/face_landmarker.task"
-)
 
 
 def creer_landmarker():
@@ -43,15 +38,10 @@ def creer_landmarker():
 
 def dessiner_landmarks(frame, landmarks, w, h):
     for lm in landmarks:
-        x, y = int(lm.x * w), int(lm.y * h)
-        cv2.circle(frame, (x, y), 1, (0, 200, 0), -1)
+        cv2.circle(frame, (int(lm.x * w), int(lm.y * h)), 1, (0, 200, 0), -1)
 
 
 def lancer_detection(conducteur="Inconnu"):
-    """
-    Lance la boucle de détection pour le conducteur authentifié.
-    Chaque alerte est écrite en CSV ET en base (table Alert).
-    """
     landmarker = creer_landmarker()
 
     cap = cv2.VideoCapture(CAM_INDEX)
@@ -73,6 +63,10 @@ def lancer_detection(conducteur="Inconnu"):
     cpt_dist      = 0
     nb_alertes    = 0
 
+    # ── Suivi de transition ──────────────────────────
+    # Écriture en base + buzzer UNIQUEMENT quand on ENTRE dans un état d'alerte
+    statut_precedent = "Eveille"
+
     liste_fps = []
     liste_ear = []
     t_debut   = time.time()
@@ -92,14 +86,11 @@ def lancer_detection(conducteur="Inconnu"):
 
             frame_traite = pretraiter_frame(frame)
             frame_rgb    = cv2.cvtColor(frame_traite, cv2.COLOR_BGR2RGB)
-
             mp_image     = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
-            timestamp_ms = int(time.time() * 1000)
-            res          = landmarker.detect_for_video(mp_image, timestamp_ms)
+            res          = landmarker.detect_for_video(mp_image, int(time.time() * 1000))
 
             ear, mar, pitch, yaw, roll = 0.0, 0.0, 0.0, 0.0, 0.0
-            statut  = "Aucun visage"
-            couleur = (128, 128, 128)
+            statut, couleur = "Aucun visage", (128, 128, 128)
 
             if res.face_landmarks:
                 lm = res.face_landmarks[0]
@@ -114,41 +105,47 @@ def lancer_detection(conducteur="Inconnu"):
                 cpt_tete_tomb = cpt_tete_tomb + 1 if (pitch < POSE_SEUIL_PITCH or abs(roll) > POSE_SEUIL_ROLL) else 0
                 cpt_dist      = cpt_dist      + 1 if abs(yaw) > POSE_SEUIL_YAW else 0
 
+                # ── Calcul du nouveau statut ─────────
                 if cpt_yeux >= FRAMES_CONSEC:
                     statut, couleur = "SOMNOLENCE", (0, 0, 255)
-                    nb_alertes += 1
-                    ecrire_log("SOMNOLENCE", ear, mar, yaw, pitch, roll, conducteur)
-                    buzzer.declencher_alerte("SOMNOLENCE")
-
-                elif cpt_baille >= 15 or cpt_tete_tomb >= 15:
-                    statut, couleur = "FATIGUE", (0, 140, 255)
-                    nb_alertes += 1
-                    sous_type = "BAILLEMENT" if cpt_baille >= 15 else "TETE_TOMBANTE"
-                    ecrire_log(f"FATIGUE-{sous_type}", ear, mar, yaw, pitch, roll, conducteur)
-                    buzzer.declencher_alerte("FATIGUE")
-
-                elif cpt_dist >= 15:
+                elif cpt_baille >= FRAMES_CONSEC_POSE or cpt_tete_tomb >= FRAMES_CONSEC_POSE:
+                    sous = "BAILLEMENT" if cpt_baille >= FRAMES_CONSEC_POSE else "TETE_TOMBANTE"
+                    statut, couleur = f"FATIGUE-{sous}", (0, 140, 255)
+                elif cpt_dist >= FRAMES_CONSEC_POSE:
                     statut, couleur = "DISTRACTION", (255, 0, 0)
-                    nb_alertes += 1
-                    ecrire_log("DISTRACTION", ear, mar, yaw, pitch, roll, conducteur)
-                    buzzer.declencher_alerte("DISTRACTION")
-
                 else:
                     statut, couleur = "Eveille", (0, 255, 0)
 
+                # ── Transition → action une seule fois ─
+                if statut != statut_precedent:
+                    if statut != "Eveille":
+                        # Entrée dans un état d'alerte
+                        nb_alertes += 1
+                        ecrire_log(statut, ear, mar, yaw, pitch, roll, conducteur)
+                        buzzer.declencher_alerte(
+                            "SOMNOLENCE" if "SOMNOLENCE" in statut
+                            else "FATIGUE"  if "FATIGUE"    in statut
+                            else "DISTRACTION"
+                        )
+                    statut_precedent = statut
+
                 dessiner_landmarks(frame, lm, w, h)
 
+            # ── Mise à jour session + état partagé ───
+            session_manager.mettre_a_jour_statut(statut)
             fps = 1.0 / (time.time() - t0)
             liste_fps.append(fps)
+            state.mettre_a_jour(conducteur, statut, ear, mar, yaw, pitch, roll, fps, nb_alertes)
 
-            afficher_hud(frame, conducteur, statut, couleur, ear, mar, yaw, pitch, roll, fps, nb_alertes)
-            cv2.imshow("Detection Somnolence  (Q pour quitter)", frame)
+            # afficher_hud(frame, conducteur, statut, couleur, ear, mar, yaw, pitch, roll, fps, nb_alertes)
+            # cv2.imshow("Detection Somnolence  (Q pour quitter)", frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
     cap.release()
     cv2.destroyAllWindows()
     buzzer.arreter()
+    state.reinitialiser()
     rapport_final(liste_fps, liste_ear, nb_alertes, time.time() - t_debut)
 
 

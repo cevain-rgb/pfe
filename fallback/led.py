@@ -1,16 +1,16 @@
 # led.py
-# Contrôle de la LED d'authentification (GPIO Raspberry Pi)
+# Contrôle de la LED d'authentification et d'alertes (GPIO Raspberry Pi) 
 # Fallback console si testé sur PC (pas de GPIO disponible)
 
 import threading
 import time
 
-from config import LED_PIN
+from config import LED_BLUE_PIN, LED_RED_PIN, LED_YELLOW_PIN
 
 try:
     import RPi.GPIO as GPIO
     GPIO.setmode(GPIO.BCM)
-    GPIO.setup(LED_PIN, GPIO.OUT)
+    GPIO.setup(LED_BLUE_PIN, GPIO.OUT)
     GPIO_DISPONIBLE = True
 except (ImportError, RuntimeError):
     GPIO_DISPONIBLE = False
@@ -19,15 +19,14 @@ except (ImportError, RuntimeError):
 _clignotement_actif = False
 _thread_led = None
 
-
-def _set_led(etat):
+def _set_led(etat, pin=LED_BLUE_PIN):
     """Allume (True) ou éteint (False) la LED — physique ou console."""
     if GPIO_DISPONIBLE:
-        GPIO.output(LED_PIN, GPIO.HIGH if etat else GPIO.LOW)
+        GPIO.output(pin, GPIO.HIGH if etat else GPIO.LOW)
     else:
         print(f"[LED] {'🔵 ON ' if etat else '⚫ OFF'}", end="\r")
 
-
+# Pour le demarrage
 def _boucle_clignotement():
     """Fait clignoter la LED tant que _clignotement_actif est True."""
     etat = False

@@ -39,22 +39,21 @@ def ecrire_log(type_alerte, ear, mar, yaw, pitch, roll, conducteur="Inconnu"):
     try:
         from models import Alert, Driver
         from extensions import db
+        from session_manager import get_session_id
 
-        driver = Driver.query.filter_by(name=conducteur).first()
+        driver = Driver.query.filter_by(nom=conducteur).first()
         alert = Alert(
+            session_id=get_session_id(),          # lie l'alerte à la session courante
             driver_id=driver.id if driver else None,
             driver_name=conducteur,
             type_alerte=type_alerte,
-            ear=round(ear, 4),
-            mar=round(mar, 4),
-            yaw=round(yaw, 2),
-            pitch=round(pitch, 2),
-            roll=round(roll, 2),
+            ear=round(ear, 4), mar=round(mar, 4),
+            yaw=round(yaw, 2), pitch=round(pitch, 2), roll=round(roll, 2),
         )
         db.session.add(alert)
         db.session.commit()
     except Exception as e:
-        print(f"[LOG] ⚠️ Écriture en base échouée : {e} - CSV conservé.")
+        print(f"[LOG] ⚠️ Écriture en base échouée : {e} — CSV conservé.")
 
 
 def rapport_final(liste_fps, liste_ear, nb_alertes, duree):

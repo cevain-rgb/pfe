@@ -1,0 +1,24 @@
+# --- Serveur Flask local (Pi) ---
+Flask==3.0.3
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.0.7
+SQLAlchemy==2.0.30
+
+# --- Vision par ordinateur ---
+opencv-python==4.10.0.84
+mediapipe==0.10.14
+numpy==1.26.4
+
+# --- Modèle YOLO (pipeline principal) ---
+ultralytics==8.2.58
+
+# --- Reconnaissance faciale (TFLite) ---
+tflite-runtime==2.14.0
+# Sur PC de dev si tflite-runtime indisponible, decommenter a la place :
+# tensorflow==2.16.1
+
+# --- Synchronisation cloud ---
+requests==2.32.3
+
+# --- GPIO Raspberry Pi (uniquement sur le Pi) ---
+RPi.GPIO==0.7.1 ; platform_machine == "armv7l" or platform_machine == "aarch64"

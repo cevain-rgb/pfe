@@ -11,10 +11,11 @@ python split_dataset.py \
 python split_dataset.py --images_dir ./images --labels_dir ./labels --classes oeil_ouvert oeil_ferme baillement
 """
 
-import os
 import argparse
+import os
 import random
 import shutil
+
 
 #  CONFIGURATION 
 def parse_args():

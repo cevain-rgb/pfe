@@ -29,13 +29,14 @@ def lister_conducteurs():
     print(f"\n  {'ID':<5} {'Nom':<20} {'Source':<10} {'Enregistré le'}")
     print("  " + "-" * 55)
     for d in conducteurs:
-        print(f"  {d.id:<5} {d.name:<20} {d.source:<10} {d.created_at.strftime('%d/%m/%Y %H:%M')}")
+        print(f"  {d.id:<5} {d.nom:<20} {d.source:<10} {d.created_at.strftime('%d/%m/%Y %H:%M')}")
     print()
 
 
 def inscrire_conducteur():
-    nom = input("  Nom du conducteur : ").strip()
-    if not nom:
+    nom = input("  Nom du conducteur *: ").strip()
+    prenom = input("  Prenom : ").strip()
+    if not nom :
         print("  [ERREUR] Nom vide.")
         return
 
@@ -80,7 +81,7 @@ def inscrire_conducteur():
     if embedding is None:
         return
 
-    driver = Driver(name=nom, embedding=json.dumps(embedding), source="local")
+    driver = Driver(nom=nom, embedding=json.dumps(embedding), source="local")
     db.session.add(driver)
     db.session.commit()
     print(f"  ✅ Conducteur '{nom}' enregistré (ID={driver.id}).\n")
@@ -99,11 +100,11 @@ def supprimer_conducteur():
         print("  [ERREUR] Conducteur introuvable.")
         return
 
-    confirmation = input(f"  Supprimer '{driver.name}' ? (o/n) : ").strip().lower()
+    confirmation = input(f"  Supprimer '{driver.nom}' ? (o/n) : ").strip().lower()
     if confirmation == 'o':
         db.session.delete(driver)
         db.session.commit()
-        print(f"  ✅ Conducteur '{driver.name}' supprimé.\n")
+        print(f"  ✅ Conducteur '{driver.nom}' supprimé.\n")
     else:
         print("  [ANNULÉ]")
 
