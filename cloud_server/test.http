@@ -1,0 +1,143 @@
+### Configuration des variables globales
+@baseUrl = http://localhost:8000/api
+@contentType = application/json
+
+# Ces variables seront alimentées automatiquement si votre extension le gère,
+# sinon recopiez les valeurs générées lors du Login ou de la Création de ressources.
+@authToken = {{loginAdmin.response.body.access_token}}
+@refreshToken = {{loginAdmin.response.body.refresh_token}}
+
+
+# ══════════════════════════════════════════════════════
+# AUTH ADMIN
+# ══════════════════════════════════════════════════════
+
+### 1. Inscription d'un nouvel administrateur
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+    "nom": "Nji",
+    "prenom": "cevain",
+    "email": "admin@example.com",
+    "password": "12345678!"
+}
+
+### 2. Connexion Administrateur (Génère les tokens)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+    "email": "admin@example.com",
+    "password": "12345678!"
+}
+
+### 3. Refresh Token (Générer un nouvel access token)
+POST {{baseUrl}}/auth/refresh
+Content-Type: {{contentType}}
+Authorization: Bearer {{refreshToken}}
+
+### 4. Récupérer le profil de l'admin connecté
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{authToken}}
+
+
+# ══════════════════════════════════════════════════════
+# GROUPES
+# ══════════════════════════════════════════════════════
+
+### 1. Créer un nouveau groupe (Ex: Flotte Ouest)
+# @name creerGroupe
+POST {{baseUrl}}/groups
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+    "nom": "Flotte Camions Ouest"
+}
+
+### 2. Récupérer la liste des groupes de l'admin
+GET {{baseUrl}}/groups
+Authorization: Bearer {{authToken}}
+
+
+# ══════════════════════════════════════════════════════
+# MODULES (Raspberry Pi)
+# ══════════════════════════════════════════════════════
+
+### 1. Ajouter un module (Ex: Numéro 42) lié au groupe créé
+POST {{baseUrl}}/devices
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+    "num_module": 42,
+    "nom": "Camion Benne Scania #42",
+    "group_id": 1
+}
+
+### 2. Récupérer la liste de tous les modules de l'admin
+GET {{baseUrl}}/devices
+Authorization: Bearer {{authToken}}
+
+### 3. Assigner ou changer le groupe d'un module (Ex: Module ID 1)
+PUT {{baseUrl}}/devices/1/groupe
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+    "group_id": 1
+}
+
+### 4. Changer le statut d'un module (actif / inactif) depuis l'App Admin
+PUT {{baseUrl}}/devices/1/statut
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+    "statut": "actif"
+}
+
+
+# ══════════════════════════════════════════════════════
+# CONDUCTEURS (Drivers)
+# ══════════════════════════════════════════════════════
+
+### 1. Ajouter un conducteur avec son embedding de reconnaissance faciale
+POST {{baseUrl}}/drivers
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+    "nom": "Martin",
+    "prenom": "Pierre",
+    "email": "pierre.martin@entreprise.com",
+    "group_id": 1,
+    "embedding": [0.123, -0.456, 0.789, 0.012, -0.987]
+}
+
+### 2. Assigner ou modifier le groupe d'un conducteur (Ex: Driver ID 1)
+PUT {{baseUrl}}/drivers/1/groupe
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+    "group_id": 1
+}
+
+### 3. Usage Pi : Synchronisation des conducteurs du groupe (SANS JWT)
+GET {{baseUrl}}/drivers?num_module=42
+
+### 4. Usage Admin : Voir les conducteurs d'un groupe spécifique (AVEC JWT)
+GET {{baseUrl}}/drivers?group_id=1
+Authorization: Bearer {{authToken}}
+
+
+# ══════════════════════════════════════════════════════
+# SESSIONS DE CONDUITE (LigneUtilisation)
+# ══════════════════════════════════════════════════════
+
+### 1. Récupérer l'historique des sessions de conduite des groupes de l'admin
+GET {{baseUrl}}/sessions?limite=20
+Authorization: Bearer {{authToken}}
